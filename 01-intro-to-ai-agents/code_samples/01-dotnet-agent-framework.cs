@@ -12,8 +12,42 @@ using Microsoft.Extensions.AI;
 
 using OpenAI;
 
-// Tool Function: Random Destination Generator
+// Tool Function: Flight Availability Checker
 // This static method will be available to the agent as a callable tool
+// The [Description] attribute helps the AI understand when to use this function
+[Description("Checks if flights are available to a destination based on current political or war situation.")]
+static string CheckFlightAvailability(string destination)
+
+{
+    // Tool Function: Random Destination Generator
+    // List of affected countries (example, can be expanded)
+    var affectedCountries = new List<string>
+    {
+        "Ukraine",
+        "Russia",
+        "Israel",
+        "Syria",
+        "Afghanistan",
+        "Sudan",
+        "Yemen",
+        "Myanmar",
+        "Iran",
+        "North Korea"
+    };
+
+    // Check if destination contains any affected country
+    foreach (var country in affectedCountries)
+    {
+        if (destination.IndexOf(country, StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return $"Note: Flights to {destination} may be unavailable or disrupted due to current political or war situation.";
+        }
+    }
+    // If not affected, return empty string (no note)
+    return string.Empty;
+}
+
+
 // The [Description] attribute helps the AI understand when to use this function
 // This demonstrates how to create custom tools for AI agents
 [Description("Provides a random vacation destination.")]
@@ -72,14 +106,26 @@ AIAgent agent = openAIClient
     .AsIChatClient()
     .CreateAIAgent(
         instructions: "You are a helpful AI Agent that can help plan vacations for customers at random destinations",
-        tools: [AIFunctionFactory.Create(GetRandomDestination)]
+        tools: [AIFunctionFactory.Create(GetRandomDestination), AIFunctionFactory.Create(CheckFlightAvailability) ]
     );
 
 // Execute Agent: Plan a Day Trip
+// Prompt user for a custom message
+Console.Write("Enter your desired destination (leave blank for a random suggestion): ");
+string userInput = Console.ReadLine() ?? "";
+
+string agentPrompt;
+if (string.IsNullOrWhiteSpace(userInput))
+{
+    agentPrompt = "I want to go on vacation. Please recommend a random destination and plan a day trip. Add a fun fact about the destination. Suggest a best airplane company to fly with and a restaurant to eat at. Also check if flights are available to the recommended destination due to current political or war situation.";
+}
+else
+{
+    agentPrompt = $"I want to go on vacation to {userInput}. Please plan a day trip for me at that destination. Add a fun fact about the destination. Suggest a best airplane company to fly with and a restaurant to eat at. Also check if flights are available to {userInput} due to current political or war situation.";
+}
+
 // Run the agent with streaming enabled for real-time response display
-// Shows the agent's thinking and response as it generates the content
-// Provides better user experience with immediate feedback
-await foreach (var update in agent.RunStreamingAsync("Plan me a day trip"))
+await foreach (var update in agent.RunStreamingAsync(agentPrompt))
 {
     await Task.Delay(10);
     Console.Write(update);
