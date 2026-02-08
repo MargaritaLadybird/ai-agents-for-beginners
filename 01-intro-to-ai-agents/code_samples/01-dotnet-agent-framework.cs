@@ -40,7 +40,7 @@ static string CheckFlightAvailability(string destination)
     {
         if (destination.IndexOf(country, StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            return $"Note: Flights to {destination} may be unavailable or disrupted due to current political or war situation.";
+            return $"WARNING MESSAGE: Flights to {destination} may be unavailable or disrupted due to current political or war situation.";
         }
     }
     // If not affected, return empty string (no note)
@@ -114,15 +114,8 @@ AIAgent agent = openAIClient
 Console.Write("Enter your desired destination (leave blank for a random suggestion): ");
 string userInput = Console.ReadLine() ?? "";
 
-string agentPrompt;
-if (string.IsNullOrWhiteSpace(userInput))
-{
-    agentPrompt = "I want to go on vacation. Please recommend a random destination and plan a day trip. Add a fun fact about the destination. Suggest a best airplane company to fly with and a restaurant to eat at. Also check if flights are available to the recommended destination due to current political or war situation.";
-}
-else
-{
-    agentPrompt = $"I want to go on vacation to {userInput}. Please plan a day trip for me at that destination. Add a fun fact about the destination. Suggest a best airplane company to fly with and a restaurant to eat at. Also check if flights are available to {userInput} due to current political or war situation.";
-}
+string destination = string.IsNullOrWhiteSpace(userInput) ? "a random destination" : userInput;
+string agentPrompt = $"I want to go on vacation to {destination}. Please plan a day trip for me at that destination. Add a fun fact about the destination. Suggest a best airplane company to fly with and a restaurant to eat at. Also check if flights are available to {destination} due to current political or war situation.";
 
 // Run the agent with streaming enabled for real-time response display
 await foreach (var update in agent.RunStreamingAsync(agentPrompt))
