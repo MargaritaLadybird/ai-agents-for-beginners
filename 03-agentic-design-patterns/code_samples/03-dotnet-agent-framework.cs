@@ -129,45 +129,22 @@ AIAgent agent = openAIClient
 // Create Conversation Thread for Context Management
 AgentThread thread = agent.GetNewThread();
 
-// ============================================================================
-// DEMONSTRATION: Start with "Hello" to trigger the greeting (Issue #402 fix)
-// ============================================================================
+// Interactive agent conversation loop
 Console.WriteLine("=== Demonstrating Agentic Design Principles ===\n");
-Console.WriteLine("User: Hello\n");
-Console.WriteLine("Agent Response:");
+Console.WriteLine("Type your message to the agent. Type 'exit' to quit.\n");
 
-await foreach (var update in agent.RunStreamingAsync("Hello", thread))
+while (true)
 {
-    await Task.Delay(10);
-    Console.Write(update);
-}
+    Console.Write("User: ");
+    string userInput = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(userInput) || userInput.Trim().ToLower() == "exit")
+        break;
 
-Console.WriteLine("\n");
-
-// ============================================================================
-// DEMONSTRATION: User sets a preference (CONTROL principle)
-// ============================================================================
-Console.WriteLine("---");
-Console.WriteLine("User: I prefer luxury travel and cultural experiences.\n");
-Console.WriteLine("Agent Response:");
-
-await foreach (var update in agent.RunStreamingAsync("I prefer luxury travel and cultural experiences.", thread))
-{
-    await Task.Delay(10);
-    Console.Write(update);
-}
-
-Console.WriteLine("\n");
-
-// ============================================================================
-// DEMONSTRATION: Agent uses tools with transparency
-// ============================================================================
-Console.WriteLine("---");
-Console.WriteLine("User: Suggest a destination for me.\n");
-Console.WriteLine("Agent Response:");
-
-await foreach (var update in agent.RunStreamingAsync("Suggest a destination for me.", thread))
-{
-    await Task.Delay(10);
-    Console.Write(update);
+    Console.WriteLine("Agent Response:");
+    await foreach (var update in agent.RunStreamingAsync(userInput, thread))
+    {
+        await Task.Delay(10);
+        Console.Write(update);
+    }
+    Console.WriteLine("\n---\n");
 }
