@@ -56,6 +56,14 @@ static string SaveUserPreference(
     return $"Preference saved: {preferenceType} is now set to '{preferenceValue}'. I will remember this for future suggestions.";
 }
 
+// Tool Function: Finish Planning
+// This tool is called when the user wants to end the session after planning is complete
+[Description("Ends the planning session and says goodbye to the user.")]
+static string FinishPlanning()
+{
+    return "Thank you for using TravelAgent! Your planning session is now complete. Have a wonderful trip!";
+}
+
 // Extract configuration from environment variables
 var github_endpoint = Environment.GetEnvironmentVariable("GH_ENDPOINT") ?? "https://models.github.ai/inference";
 var github_model_id = Environment.GetEnvironmentVariable("GH_MODEL_ID") ?? "openai/gpt-5-mini";
@@ -90,6 +98,7 @@ You are a helpful AI Agent that demonstrates the Agentic Design Principles.
 - Ask about preferences before making assumptions
 - Use the SaveUserPreference tool to remember user choices
 - Always prioritize explicit user requests over defaults
+- After suggestions done and Planning done Use the FinishPlanning tool when the user indicates the planning session is complete and no changes are needed
 
 **CONSISTENCY**: Use a predictable, standardized interaction pattern.
 - Start every conversation with a friendly greeting
@@ -122,7 +131,8 @@ AIAgent agent = openAIClient
         instructions: AGENT_INSTRUCTIONS,
         tools: [
             AIFunctionFactory.Create(GetRandomDestination),
-            AIFunctionFactory.Create(SaveUserPreference)
+            AIFunctionFactory.Create(SaveUserPreference),
+            AIFunctionFactory.Create(FinishPlanning)
         ]
     );
 
@@ -133,18 +143,47 @@ AgentThread thread = agent.GetNewThread();
 Console.WriteLine("=== Demonstrating Agentic Design Principles ===\n");
 Console.WriteLine("Type your message to the agent. Type 'exit' to quit.\n");
 
-while (true)
-{
-    Console.Write("User: ");
-    string userInput = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(userInput) || userInput.Trim().ToLower() == "exit")
-        break;
 
+    // Always start with a greeting to trigger the agent's initial prompt
+    string initialPrompt = "Hello";
+    Console.WriteLine($"User: {initialPrompt}");
     Console.WriteLine("Agent Response:");
-    await foreach (var update in agent.RunStreamingAsync(userInput, thread))
+    string agentResponse = "";
+    await foreach (var update in agent.RunStreamingAsync(initialPrompt, thread))
     {
         await Task.Delay(10);
         Console.Write(update);
+        agentResponse += update;
     }
     Console.WriteLine("\n---\n");
-}
+
+    while (true)
+    {
+        Console.Write("User: ");
+        string userInput = Console.ReadLine() ?? "";
+        if (string.IsNullOrWhiteSpace(userInput) || userInput.Trim().ToLower() == "exit")
+            break;
+
+        Console.WriteLine("Agent Response:");
+        agentResponse = "";
+        await foreach (var update in agent.RunStreamingAsync(userInput, thread))
+        {
+            await Task.Delay(10);
+            Console.Write(update);
+            agentResponse += update;
+        }
+        Console.WriteLine("\n---\n");
+
+        // Only prompt to end session if user says they are satisfied
+        string userInputLower = userInput.Trim().ToLower();
+        if (userInputLower.Contains("thank you for the plan") || userInputLower.Contains("i am satisfied") || userInputLower.Contains("i am happy"))
+        {
+            Console.Write("Do you want to end the session? (yes/no): ");
+            string confirm = Console.ReadLine() ?? "";
+            if (!string.IsNullOrWhiteSpace(confirm) && confirm.Trim().ToLower().StartsWith("y"))
+            {
+                Console.WriteLine("Session ended. Goodbye!");
+                break;
+            }
+        }
+    }
